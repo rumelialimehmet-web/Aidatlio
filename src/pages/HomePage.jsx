@@ -4,10 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AuthDialog } from '@/components/auth/AuthDialog';
 import { useAuthStore } from '@/store/authStore';
-import { Building2, LogOut, Plus } from 'lucide-react';
+import { getUserApartmanlar } from '@/lib/firestore';
+import { Building2, LogOut, Plus, ChevronRight } from 'lucide-react';
 
 export function HomePage() {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [apartmanlar, setApartmanlar] = useState([]);
+  const [loadingApartmanlar, setLoadingApartmanlar] = useState(false);
   const { user, loading, signOut: logout, initAuth } = useAuthStore();
   const navigate = useNavigate();
 
@@ -15,6 +18,25 @@ export function HomePage() {
     const unsubscribe = initAuth();
     return () => unsubscribe();
   }, [initAuth]);
+
+  // Kullanıcı giriş yaptıysa apartmanları getir
+  useEffect(() => {
+    if (user) {
+      loadApartmanlar();
+    }
+  }, [user]);
+
+  const loadApartmanlar = async () => {
+    setLoadingApartmanlar(true);
+    try {
+      const data = await getUserApartmanlar(user.uid);
+      setApartmanlar(data);
+    } catch (error) {
+      console.error('Apartmanlar yüklenemedi:', error);
+    } finally {
+      setLoadingApartmanlar(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -135,22 +157,59 @@ export function HomePage() {
             </Button>
           </div>
 
-          {/* Apartman listesi - şimdilik boş */}
-          <Card>
-            <CardContent className="py-12">
-              <div className="text-center text-gray-500">
-                <Building2 className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                <p className="text-lg font-medium mb-2">Henüz apartman oluşturmadınız</p>
-                <p className="text-sm mb-4">
-                  İlk apartmanınızı oluşturarak başlayın
-                </p>
-                <Button onClick={() => navigate('/apartman-olustur')}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Apartman Oluştur
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Apartman listesi */}
+          {loadingApartmanlar ? (
+            <Card>
+              <CardContent className="py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Apartmanlar yükleniyor...</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : apartmanlar.length === 0 ? (
+            <Card>
+              <CardContent className="py-12">
+                <div className="text-center text-gray-500">
+                  <Building2 className="h-16 w-16 mx-auto mb-4 text-gray-400" />
+                  <p className="text-lg font-medium mb-2">Henüz apartman oluşturmadınız</p>
+                  <p className="text-sm mb-4">
+                    İlk apartmanınızı oluşturarak başlayın
+                  </p>
+                  <Button onClick={() => navigate('/apartman-olustur')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Apartman Oluştur
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {apartmanlar.map((apartman) => (
+                <Card
+                  key={apartman.id}
+                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => navigate(`/apartman/${apartman.id}`)}
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Building2 className="h-8 w-8 text-primary" />
+                        <div>
+                          <CardTitle>{apartman.ad}</CardTitle>
+                          <CardDescription>
+                            {apartman.daireSayisi} Daire
+                            {apartman.varsayilanAidat > 0 && ` • Aidat: ₺${apartman.varsayilanAidat}`}
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
