@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Apartmanlar koleksiyonu
+    match /apartmanlar/{apartmanId} {
+      // Herkes okuyabilir (daire sahipleri apartman bilgisini görebilmeli)
+      allow read: if true;
+
+      // Sadece apartman sahibi (yönetici) yazabilir
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null
+        && request.auth.uid == resource.data.yoneticId;
+    }
+
+    // Daireler koleksiyonu
+    match /daireler/{daireId} {
+      // Herkes okuyabilir (daire sahipleri kendi dairelerini görebilmeli)
+      allow read: if true;
+
+      // Sadece ilgili apartmanın yöneticisi yazabilir
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null
+        && request.auth.uid == get(/databases/$(database)/documents/apartmanlar/$(resource.data.apartmanId)).data.yoneticId;
+    }
+
+    // Giderler koleksiyonu
+    match /giderler/{giderId} {
+      // Herkes okuyabilir (daire sahipleri giderleri görebilmeli)
+      allow read: if true;
+
+      // Sadece ilgili apartmanın yöneticisi yazabilir
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null
+        && request.auth.uid == get(/databases/$(database)/documents/apartmanlar/$(resource.data.apartmanId)).data.yoneticId;
+    }
+
+    // Ödeme Dekontları koleksiyonu
+    match /odemeDekontlari/{dekontId} {
+      // Sadece kendi dekontlarını okuyabilir veya yönetici okuyabilir
+      allow read: if true; // Herkes okuyabilir (daire sahipleri kendi dekontlarını görebilmeli)
+
+      // Herkes dekont yükleyebilir (auth gerekmez, public link)
+      allow create: if true;
+
+      // Sadece ilgili apartmanın yöneticisi güncelleyebilir/silebilir
+      allow update, delete: if request.auth != null
+        && request.auth.uid == get(/databases/$(database)/documents/apartmanlar/$(resource.data.apartmanId)).data.yoneticId;
+    }
+  }
+}

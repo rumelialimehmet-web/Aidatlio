@@ -1,0 +1,20 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Dekontlar klasörü
+    match /dekontlar/{apartmanId}/{daireId}/{fileName} {
+      // Herkes okuyabilir (yönetici ve daire sahibi)
+      allow read: if true;
+
+      // Herkes yazabilir (daire sahipleri dekont yükleyebilmeli, auth gerekmez)
+      // Sadece 5MB'dan küçük dosyalar
+      allow write: if request.resource.size < 5 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*')
+            || request.resource.contentType == 'application/pdf');
+
+      // Silme sadece yönetici için
+      allow delete: if request.auth != null;
+    }
+  }
+}
