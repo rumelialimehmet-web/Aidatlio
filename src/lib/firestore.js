@@ -159,3 +159,37 @@ export async function getApartmanGiderler(apartmanId) {
     throw error;
   }
 }
+
+// Ödeme dekontu ekle
+export async function createOdemeDekontu(dekontData) {
+  try {
+    const dekontRef = await addDoc(collection(db, 'odemeDekontlari'), {
+      ...dekontData,
+      olusturmaTarihi: serverTimestamp(),
+      durum: 'beklemede', // beklemede, onaylandi, reddedildi
+    });
+    return dekontRef.id;
+  } catch (error) {
+    console.error('Dekont oluşturma hatası:', error);
+    throw error;
+  }
+}
+
+// Daireye ait ödeme dekontlarını getir
+export async function getDaireOdemeDekontlari(daireId) {
+  try {
+    const q = query(
+      collection(db, 'odemeDekontlari'),
+      where('daireId', '==', daireId),
+      orderBy('olusturmaTarihi', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+  } catch (error) {
+    console.error('Dekontları getirme hatası:', error);
+    throw error;
+  }
+}
